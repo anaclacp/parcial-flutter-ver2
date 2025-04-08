@@ -41,6 +41,9 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
         title: const Text('Lembretes de Manutenção'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: AppColors.white, // Cor do texto da aba SELECIONADA
+          unselectedLabelColor: AppColors.white.withAlpha(179), // Cor do texto da aba NÃO SELECIONADA (branco um pouco opaco)
+          indicatorColor: AppColors.white,
           tabs: const [
             Tab(text: 'Próximos'),
             Tab(text: 'Histórico'),

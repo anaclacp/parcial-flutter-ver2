@@ -39,7 +39,7 @@ void _resetPassword() {
         // Mostra a mensagem de sucesso (agora seguro)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Password reset email sent. Please check your inbox.'),
+            content: Text('E-mail de redefinição de senha enviado. Por favor, verifique sua caixa de entrada.'),
             backgroundColor: AppColors.success,
           ),
         );

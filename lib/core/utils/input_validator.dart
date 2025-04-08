@@ -1,12 +1,12 @@
 class InputValidator {
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return 'E-mail é obrigatório';
     }
     
     final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegExp.hasMatch(value)) {
-      return 'Please enter a valid email address';
+      return 'Por favor, insira um endereço de e-mail válido';
     }
     
     return null;
@@ -14,11 +14,11 @@ class InputValidator {
 
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return 'Senha é obrigatória';
     }
     
     if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+      return 'A senha deve ter pelo menos 6 caracteres';
     }
     
     return null;
@@ -26,7 +26,7 @@ class InputValidator {
 
   static String? validateName(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Name is required';
+      return 'Nome é obrigatório';
     }
     
     return null;
@@ -34,47 +34,46 @@ class InputValidator {
 
   static String? validatePhone(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'Número de telefone é obrigatório';
     }
     
-    final phoneRegExp = RegExp(r'^\+?[0-9]{10,15}$');
+  final phoneRegExp = RegExp(r'^\+?[0-9]{10,15}$');
     if (!phoneRegExp.hasMatch(value)) {
-      return 'Please enter a valid phone number';
+      return 'Por favor, insira um número de telefone válido';
     }
-    
-    return null;
-  }
 
-  static String? validateConfirmPassword(String? value, String password) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
-    }
-    
-    if (value != password) {
-      return 'Passwords do not match';
-    }
-    
     return null;
-  }
+    }
 
-  static String? validateNotEmpty(String? value, String fieldName) {
-    if (value == null || value.isEmpty) {
-      return '$fieldName is required';
-    }
-    
-    return null;
-  }
+    static String? validateConfirmPassword(String? value, String password) {
+      if (value == null || value.isEmpty) {
+        return 'Por favor, confirme sua senha';
+      }
 
-  static String? validateNumber(String? value, String fieldName) {
-    if (value == null || value.isEmpty) {
-      return '$fieldName is required';
+      if (value != password) {
+        return 'As senhas não coincidem';
+      }
+
+      return null;
     }
-    
-    if (double.tryParse(value) == null) {
-      return 'Please enter a valid number';
+
+    static String? validateNotEmpty(String? value, String fieldName) {
+      if (value == null || value.isEmpty) {
+        return '$fieldName é obrigatório';
+      }
+
+      return null;
     }
-    
-    return null;
-  }
+
+    static String? validateNumber(String? value, String fieldName) {
+      if (value == null || value.isEmpty) {
+        return '$fieldName é obrigatório';
+      }
+
+      if (double.tryParse(value) == null) {
+        return 'Por favor, insira um número válido';
+      }
+
+      return null;
+    }
 }
-

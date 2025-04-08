@@ -40,6 +40,9 @@ class _FuelConsumptionPageState extends State<FuelConsumptionPage> with SingleTi
         title: const Text('Consumo de Combustível'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: AppColors.white, // Cor do texto da aba SELECIONADA
+          unselectedLabelColor: AppColors.white.withAlpha(179), // Cor do texto da aba NÃO SELECIONADA (branco um pouco opaco)
+          indicatorColor: AppColors.white,
           tabs: const [
             Tab(text: 'Registros'),
             Tab(text: 'Estatísticas'),

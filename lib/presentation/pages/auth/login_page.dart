@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       // Simula a chamada da API
-      Future.delayed(const Duration(seconds: 2), () { // Início do callback assíncrono
+      Future.delayed(const Duration(seconds: 2), () { 
 
         // +++ ADICIONE A VERIFICAÇÃO 'mounted' AQUI +++
         if (mounted) {
@@ -51,9 +51,7 @@ class _LoginPageState extends State<LoginPage> {
           // Navega para a home (agora seguro)
           Navigator.of(context).pushReplacementNamed('/início');
         }
-        // ++++++++++++++++++++++++++++++++++++++++++++++
-
-      }); // Fim do callback assíncrono
+      });
     }
   }
   @override
