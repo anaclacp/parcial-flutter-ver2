@@ -9,6 +9,7 @@ class Trip {
   final double? maxSpeed;
   final String? notes;
   final List<String>? photoIds;
+  final String? coverPhotoUrl;
 
   Trip({
     this.id,
@@ -21,6 +22,7 @@ class Trip {
     this.maxSpeed,
     this.notes,
     this.photoIds,
+    this.coverPhotoUrl,
   });
 
   Trip copyWith({
@@ -33,6 +35,7 @@ class Trip {
     double? averageSpeed,
     double? maxSpeed,
     String? notes,
+    String? coverPhotoUrl,
     List<String>? photoIds,
   }) {
     return Trip(
@@ -46,6 +49,7 @@ class Trip {
       maxSpeed: maxSpeed ?? this.maxSpeed,
       notes: notes ?? this.notes,
       photoIds: photoIds ?? this.photoIds,
+      coverPhotoUrl: coverPhotoUrl ?? this.coverPhotoUrl,
     );
   }
 }

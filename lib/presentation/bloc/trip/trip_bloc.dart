@@ -19,6 +19,7 @@ class TripBloc extends Bloc<TripEvent, TripState> {
       averageSpeed: 82.2,
       maxSpeed: 110.0,
       notes: 'Viagem de Jaboticabal a Avaré com destino ao Camping Municipal às margens da Represa de Jurumirim. Percurso tranquilo com belas paisagens e oportunidade para atividades aquáticas.',
+      coverPhotoUrl: 'assets/images/camping-avare.png',
     ),
     Trip(
       id: '2',
@@ -30,6 +31,7 @@ class TripBloc extends Bloc<TripEvent, TripState> {
       averageSpeed: 66.5,
       maxSpeed: 100.0,
       notes: 'Viagem de Ribeirão Preto a Olímpia para aproveitar um dia no Thermas dos Laranjais, com diversas atrações aquáticas e águas termais.',
+      coverPhotoUrl: 'assets/images/thermas.png',
     ),
     Trip(
       id: '3',
@@ -41,6 +43,7 @@ class TripBloc extends Bloc<TripEvent, TripState> {
       averageSpeed: 90.0,
       maxSpeed: 130.0,
       notes: 'Viagem de Jaboticabal a Bueno de Andrada para degustar as famosas coxinhas da região, conhecidas por seu sabor e tradição.',
+      coverPhotoUrl: 'assets/images/bueno-de-andrada.png',
     ),
   ];
 

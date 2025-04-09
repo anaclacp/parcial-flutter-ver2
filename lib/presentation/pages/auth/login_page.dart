@@ -38,17 +38,14 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true;
       });
 
-      // Simula a chamada da API
       Future.delayed(const Duration(seconds: 2), () { 
 
-        // +++ ADICIONE A VERIFICAÇÃO 'mounted' AQUI +++
         if (mounted) {
-          // Para o loading (agora seguro)
+
           setState(() {
             _isLoading = false;
           });
 
-          // Navega para a home (agora seguro)
           Navigator.of(context).pushReplacementNamed('/início');
         }
       });

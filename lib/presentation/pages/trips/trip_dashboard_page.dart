@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../domain/entities/trip.dart';
+import '../../bloc/trip/trip_bloc.dart';
+import '../../bloc/trip/trip_event.dart';
+import '../../bloc/trip/trip_state.dart';
+import '../../widgets/common/loading_indicator.dart'; // Ajuste o caminho se necessário
 import '../../widgets/trip/trip_card.dart';
 import '../../widgets/trip/trip_stats_widget.dart';
-
 
 class TripDashboardPage extends StatefulWidget {
   const TripDashboardPage({super.key});
@@ -13,53 +16,23 @@ class TripDashboardPage extends StatefulWidget {
 }
 
 class _TripDashboardPageState extends State<TripDashboardPage> {
-  final List<Trip> _trips = [
-    Trip(
-      id: '1',
-      title: 'Bate e Volta para Campos do Jordão',
-      startTime: DateTime.now().subtract(const Duration(days: 2)),
-      endTime: DateTime.now().subtract(const Duration(days: 2, hours: 3)),
-      distance: 120.5,
-      duration: 180,
-      averageSpeed: 40.2,
-      maxSpeed: 65.8,
-      notes: 'Viagem tranquila pela serra, com paradas para fotos e um café colonial.',
-    ),
-    Trip(
-      id: '2',
-      title: 'Viagem de Ribeirão Preto ao Posto Castelo em São Carlos',
-      startTime: DateTime.now().subtract(const Duration(days: 7)),
-      endTime: DateTime.now().subtract(const Duration(days: 7, hours: 5)),
-      distance: 100.0,
-      duration: 65,
-      averageSpeed: 80.0,
-      maxSpeed: 140.0,
-      notes: 'Deslocamento pela Rodovia Washington Luís até o tradicional Castelo Restaurante & Grill para um café especial.',
-    ),
-    Trip(
-      id: '3',
-      title: 'Deslocamento da Unaerp para a Citel',
-      startTime: DateTime.now().subtract(const Duration(days: 1)),
-      endTime: DateTime.now().subtract(const Duration(days: 1, minutes: 45)),
-      distance: 5.0,
-      duration: 8,
-      averageSpeed: 40.0,
-      maxSpeed: 100.0,
-      notes: 'Deslocamento urbano com tráfego leve. Percurso pela av. Maurilio Biagi de Ribeirão Preto.',
-    ),
-  ];
-
-  String? _profileImagePath; 
-  String _motoModel = 'R3 2026'; 
-  String _motoColor = 'Branca'; 
+  String? _profileImagePath;
+  String _motoModel = 'R3 2026';
+  String _motoColor = 'Branca';
 
   @override
   void initState() {
     super.initState();
     _profileImagePath = 'assets/images/ana_foto_perfil.jpg';
+
+    // Disparar o evento para carregar as viagens do BLoC após o primeiro frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+             context.read<TripBloc>().add(LoadTripsEvent());
+        }
+    });
   }
 
-  // --- Método Build Principal ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,81 +50,25 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
           ),
         ],
       ),
-      drawer: _buildDrawer(), // Chama a construção do Drawer
-      body: RefreshIndicator(
-        onRefresh: () async {
-          // Simula um refresh
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) {
-            setState(() {
-              // Lógica de refresh (se buscar dados reais) iria aqui
-            });
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              const SnackBar(content: Text('Dados atualizados!')),
-            );
-          }
+      drawer: _buildDrawer(),
+      body: BlocBuilder<TripBloc, TripState>(
+        builder: (context, state) {
+          // O RefreshIndicator agora envolve o _buildBodyContent
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<TripBloc>().add(LoadTripsEvent());
+               // Espera o próximo estado que não seja loading
+               await context.read<TripBloc>().stream.firstWhere(
+                    (nextState) => nextState is! TripLoading,
+               );
+            },
+            child: _buildBodyContent(context, state), // Chama o método auxiliar corrigido
+          );
         },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Widget de Estatísticas
-              TripStatsWidget(
-                totalTrips: _trips.length,
-                totalDistance: _trips.fold(
-                  0.0,
-                  (sum, trip) => sum + (trip.distance ?? 0),
-                ),
-                longestTrip: _trips.fold(
-                  0.0,
-                  (max, trip) => trip.distance != null && trip.distance! > max
-                      ? trip.distance!
-                      : max,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Título "Viagens Recentes"
-              const Text(
-                'Viagens Recentes',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGray,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Lista de Viagens ou Estado Vazio
-              _trips.isEmpty
-                  ? _buildEmptyState() 
-                  : ListView.builder( 
-                      shrinkWrap: true, 
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _trips.length,
-                      itemBuilder: (context, index) {
-                        final trip = _trips[index];
-                        return TripCard(
-                          trip: trip,
-                          onTap: () {
-                            Navigator.of(context).pushNamed(
-                              '/viagem/detalhe',
-                              arguments: trip,
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ],
-          ),
-        ),
       ),
-      // Botão Flutuante para Adicionar Viagem
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).pushNamed('/trip/create'); 
+          Navigator.of(context).pushNamed('/trip/create'); // CONFIRME ROTA
         },
         tooltip: 'Adicionar Nova Viagem',
         backgroundColor: AppColors.accentColor,
@@ -160,10 +77,87 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
     );
   }
 
+  // -- Método auxiliar para construir o corpo baseado no estado do BLoC (CORRIGIDO) --
+  Widget _buildBodyContent(BuildContext context, TripState state) {
+    // 1. Tratar o Estado de Erro Primeiro
+    if (state is TripError) {
+      return Center( // Envolve com Center para ocupar espaço e permitir scroll do RefreshIndicator
+         child: SingleChildScrollView( // Permite scroll se o erro for grande
+           physics: const AlwaysScrollableScrollPhysics(), // Garante que o refresh funcione
+           child: Padding(
+             padding: const EdgeInsets.all(16.0),
+             child: Column(
+               mainAxisAlignment: MainAxisAlignment.center,
+               children: [
+                 const Icon(Icons.error_outline, color: AppColors.error, size: 60),
+                 const SizedBox(height: 16),
+                 Text(
+                   'Erro ao carregar viagens:\n${state.message}',
+                   textAlign: TextAlign.center,
+                   style: const TextStyle(color: AppColors.darkGray, fontSize: 16),
+                 ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<TripBloc>().add(LoadTripsEvent()),
+                    child: const Text('Tentar Novamente'),
+                  )
+               ],
+             ),
+           ),
+         ),
+       );
+    }
+
+    // 2. Tratar o Estado Carregado (SUCESSO)
+    if (state is TripsLoaded) {
+      final trips = state.trips;
+
+      // A estrutura principal com SingleChildScrollView permite o RefreshIndicator funcionar
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TripStatsWidget(
+              totalTrips: trips.length,
+              totalDistance: trips.fold(0.0,(sum, trip) => sum + (trip.distance ?? 0)),
+              longestTrip: trips.fold(0.0,(max, trip) => trip.distance != null && trip.distance! > max ? trip.distance! : max),
+            ),
+            const SizedBox(height: 24),
+            const Text('Viagens Recentes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkGray)),
+            const SizedBox(height: 16),
+            trips.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: trips.length,
+                    itemBuilder: (context, index) {
+                      final trip = trips[index];
+                      return TripCard(
+                        trip: trip,
+                        onTap: () {
+                          Navigator.of(context).pushNamed('/viagem/detalhe', arguments: trip); // CONFIRME ROTA
+                        },
+                      );
+                    },
+                  ),
+          ],
+        ),
+      );
+    }
+
+    // 3. Tratar o Estado de Carregamento ou Inicial
+    // Mostra o indicador centralizado. O RefreshIndicator também terá seu próprio spinner ao puxar.
+    return const Center(child: LoadingIndicator(message: 'Carregando viagens...'));
+  }
+
   Widget _buildEmptyState() {
+    // Adicionado Center para garantir que o RefreshIndicator tenha um child com tamanho
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 40.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -281,7 +275,7 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
                           ],
                         ),
                       ),
-                      // Botão editar dados da moto
+                      
                       InkWell(
                         onTap: _showEditMotoDialog,
                         child: Padding(
@@ -361,7 +355,7 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
             title: const Text('Sair'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/login'); // CONFIRME ROTA
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (Route<dynamic> route) => false); // CONFIRME ROTA
             },
           ),
         ],
@@ -369,20 +363,17 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
     );
   }
 
-  // --- Função para "Selecionar" Imagem (Simulação) ---
   Future<void> _selectProfileImage() async {
-    final exampleImages = [
-      // SUBSTITUA PELOS CAMINHOS REAIS DOS SEUS ASSETS!
+     final exampleImages = [
       'assets/images/ana_foto_perfil.jpg',
-      'assets/images/moto_exemplo_1.png',
-      'assets/images/moto_exemplo_2.jpg',
+      'assets/fixed_photos/moto_exemplo_1.jpg',
+      'assets/fixed_photos/moto_exemplo_2.jpg',
     ];
-    final randomIndex = DateTime.now().millisecond % exampleImages.length;
-    final selectedPath = exampleImages[randomIndex];
-
-    print('Imagem selecionada (simulado): $selectedPath');
+    final currentIndex = _profileImagePath != null ? exampleImages.indexOf(_profileImagePath!) : -1;
+    final nextIndex = (currentIndex + 1) % exampleImages.length;
+    final selectedPath = exampleImages[nextIndex];
+    print('Imagem de perfil selecionada (simulado): $selectedPath');
     setState(() { _profileImagePath = selectedPath; });
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Foto de perfil atualizada (simulado)!')),
@@ -390,7 +381,6 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
     }
   }
 
-  // --- Função para Editar Dados da Moto ---
   void _showEditMotoDialog() {
     final modelController = TextEditingController(text: _motoModel);
     final colorController = TextEditingController(text: _motoColor);
@@ -417,6 +407,9 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
                   _motoColor = colorController.text;
                 });
                 Navigator.pop(dialogContext);
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Dados da moto atualizados (localmente)!')),
+                 );
               },
               child: const Text('Salvar'),
             ),
@@ -428,4 +421,4 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
       colorController.dispose();
     });
   }
-} 
+}

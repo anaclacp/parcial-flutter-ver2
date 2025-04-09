@@ -30,17 +30,37 @@ class TripCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryColor.withOpacity(0.26),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.motorcycle,
-                      color: AppColors.primaryColor,
-                      size: 32,
+                  ClipRRect( // Adiciona ClipRRect para aplicar o borderRadius à imagem
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      // Mantém a cor de fundo para casos de erro ou ausência de imagem
+                      color: AppColors.primaryColor.withOpacity(0.1), // Talvez um pouco mais sutil
+                      child: trip.coverPhotoUrl != null && trip.coverPhotoUrl!.isNotEmpty
+                          ? Image.asset( // <<< USA Image.asset PORQUE SEU EXEMPLO USA CAMINHOS DE ASSET
+                              trip.coverPhotoUrl!,
+                              fit: BoxFit.cover, // Para preencher o container
+                              errorBuilder: (context, error, stackTrace) {
+                                // É útil logar o erro para debug
+                                print("Erro ao carregar asset da capa no card: ${trip.coverPhotoUrl} - $error");
+                                // Retorna um ícone indicando erro ao carregar o asset
+                                return const Center(
+                                  child: Icon(
+                                    Icons.broken_image_outlined, // Ou Icons.image_not_supported
+                                    color: AppColors.mediumGray,
+                                    size: 32,
+                                  ),
+                                );
+                              },
+                            )
+                          : const Center( // <<< Fallback: Se não houver URL, mostra o ícone original
+                              child: Icon(
+                                Icons.motorcycle, // Ícone padrão
+                                color: AppColors.primaryColor,
+                                size: 32,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 16),
