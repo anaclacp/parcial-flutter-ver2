@@ -2,6 +2,9 @@
 
 O Diário do Motociclista é um aplicativo Flutter projetado para ajudar entusiastas de motocicletas a acompanhar suas viagens, gerenciar a manutenção do veículo e registrar o consumo de combustível, tudo em um só lugar. Inspirado no aplicativo Yamaha Connected.
 
+
+# Prova Parcial
+
 ## ✨ Requisitos Funcionais
 
 Este aplicativo implementa os seguintes requisitos funcionais e funcionalidades específicas:
@@ -29,3 +32,36 @@ Este aplicativo implementa os seguintes requisitos funcionais e funcionalidades 
 *   **Listagem de dados (RF007):**
     *   Uso de ListView e GridView nas telas `trip_dashboard_page.dart`, `photo_gallery_page.dart`.
 
+
+# Prova Final
+
+## Instruções de como utilizar esse repositório
+
+### Pré-requisitos
+- Flutter SDK instalado
+- VS Code (utilizei ele) ou Android Studio
+- Git
+
+### Configuração do Projeto
+
+**1. Clone o repositório:**
+```bash
+git clone [https://github.com/anaclacp/parcial-flutter-ver2]
+cd [parcial-flutter-ver2]
+```
+
+**2. Instale as dependências:**
+```bash
+flutter pub add flutter_lints
+flutter pub get
+```
+
+**3. Verifique se o Flutter está configurado corretamente:**
+```bash
+flutter doctor
+```
+
+**4. Execute o projeto:**
+```bash
+flutter run
+```
