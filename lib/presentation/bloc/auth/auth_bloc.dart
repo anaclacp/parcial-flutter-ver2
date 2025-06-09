@@ -45,20 +45,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onSignIn(SignInRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      await _firebaseAuth.signInWithEmailAndPassword(
+      // MODIFICAÇÃO IMPORTANTE: Capture o resultado da chamada
+      final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: event.email,
         password: event.password,
       );
-      // Não precisamos emitir `Authenticated` aqui. O `AuthWrapper` no main.dart
-      // já escuta as mudanças de estado do Firebase e fará a navegação automaticamente.
+
+      // NOVO: Verifique se o login retornou um usuário e emita o estado de sucesso
+      if (userCredential.user != null) {
+        emit(Authenticated(user: userCredential.user!));
+      } else {
+        // Caso muito raro, mas é bom ter um fallback
+        emit(const AuthError(message: 'Não foi possível verificar o usuário após o login.'));
+      }
+
     } on FirebaseAuthException catch (e) {
-      // Captura erros específicos do Firebase e os exibe.
       emit(AuthError(message: e.message ?? 'Ocorreu um erro de login.'));
     } catch (e) {
       emit(AuthError(message: 'Um erro inesperado ocorreu: ${e.toString()}'));
     }
   }
-
   // MODIFICADO: Lógica de Registro real com Firebase
   Future<void> _onRegister(RegisterRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
