@@ -20,6 +20,9 @@ dependencies:
   flutter_svg: ^2.0.7
   google_fonts: ^5.1.0
   flutter_lints: ^6.0.0
+  firebase_core: ^2.30.0    # Pacote principal para conectar seu app ao Firebase
+  firebase_auth: ^4.17.8    # Para Autenticação (Login, Cadastro, etc.)
+  cloud_firestore: ^4.15.8 
 
 dev_dependencies:
   flutter_test:
@@ -29,3 +32,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
