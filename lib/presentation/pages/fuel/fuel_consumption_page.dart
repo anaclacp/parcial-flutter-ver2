@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/input_validator.dart';
 import '../../../domain/entities/fuel_record.dart';
@@ -9,6 +10,7 @@ import '../../bloc/trip/trip_event.dart';
 import '../../bloc/trip/trip_state.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/loading_indicator.dart';
+
 
 class FuelConsumptionPage extends StatefulWidget {
   const FuelConsumptionPage({super.key});
@@ -577,9 +579,20 @@ class _FuelConsumptionPageState extends State<FuelConsumptionPage> with SingleTi
           TextButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
+                final userId = FirebaseAuth.instance.currentUser?.uid;
+                if (userId == null) {
+                    Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Erro: Sessão expirada. Por favor, faça login novamente.'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                    return; // Interrompe a execução
+                  }
                 final fuelRecord = FuelRecord(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  date: selectedDate, // Agora usa a variável correta e atualizada
+                  userId: userId, 
+                  date: selectedDate,
                   odometer: double.parse(odometerController.text),
                   amount: double.parse(amountController.text),
                   cost: double.parse(costController.text),
