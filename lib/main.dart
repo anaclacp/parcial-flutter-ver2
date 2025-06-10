@@ -43,7 +43,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // MODIFICAÇÃO APLICADA AQUI
         BlocProvider<AuthBloc>(
           create: (BuildContext context) {
             final bloc = di.sl<AuthBloc>();

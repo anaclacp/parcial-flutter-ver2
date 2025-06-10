@@ -1,10 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 class Trip {
   final String? id;
+  final String? userId; 
   final String? title;
   final DateTime? startTime;
   final DateTime? endTime;
   final double? distance;
-  final int? duration; // in minutes
+  final int? duration; 
   final double? averageSpeed;
   final double? maxSpeed;
   final String? notes;
@@ -13,6 +15,7 @@ class Trip {
 
   Trip({
     this.id,
+    required this.userId,
     this.title,
     this.startTime,
     this.endTime,
@@ -27,6 +30,7 @@ class Trip {
 
   Trip copyWith({
     String? id,
+    String? userId,
     String? title,
     DateTime? startTime,
     DateTime? endTime,
@@ -40,6 +44,7 @@ class Trip {
   }) {
     return Trip(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       title: title ?? this.title,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
@@ -50,6 +55,35 @@ class Trip {
       notes: notes ?? this.notes,
       photoIds: photoIds ?? this.photoIds,
       coverPhotoUrl: coverPhotoUrl ?? this.coverPhotoUrl,
+    );
+  }
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'title': title,
+      'startTime': startTime != null ? Timestamp.fromDate(startTime!) : null,
+      'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
+      'distance': distance,
+      'duration': duration,
+      'averageSpeed': averageSpeed,
+      'maxSpeed': maxSpeed,
+      'notes': notes,
+      'coverPhotoUrl': coverPhotoUrl,
+    };
+  }
+    factory Trip.fromMap(Map<String, dynamic> map, String documentId) {
+    return Trip(
+      id: documentId,
+      userId: map['userId'] ?? '',
+      title: map['title'],
+      startTime: (map['startTime'] as Timestamp?)?.toDate(),
+      endTime: (map['endTime'] as Timestamp?)?.toDate(),
+      distance: map['distance']?.toDouble(),
+      duration: map['duration']?.toInt(),
+      averageSpeed: map['averageSpeed']?.toDouble(),
+      maxSpeed: map['maxSpeed']?.toDouble(),
+      notes: map['notes'],
+      coverPhotoUrl: map['coverPhotoUrl'],
     );
   }
 }
