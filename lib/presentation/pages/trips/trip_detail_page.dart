@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_colors.dart'; 
 import '../../../domain/entities/trip.dart';
 import '../../bloc/trip/trip_bloc.dart';
 import '../../bloc/trip/trip_event.dart';
 import '../../bloc/trip/trip_state.dart';
-import '../../widgets/common/loading_indicator.dart';
 
 class TripDetailPage extends StatefulWidget {
   final Trip trip;
 
   const TripDetailPage({
-    super.key, 
+    super.key,
     required this.trip,
   });
 
@@ -22,42 +21,35 @@ class TripDetailPage extends StatefulWidget {
 
 class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isRecording = false;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
-    // If this is a new trip being created, set recording to true
-    _isRecording = widget.trip.endTime == null;
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
-  void _toggleRecording() {
-    setState(() {
-      _isRecording = !_isRecording;
-    });
-    
-    if (_isRecording) {
-      // Start recording
-      context.read<TripBloc>().add(StartTripRecordingEvent(trip: widget.trip));
-    } else {
-      // Stop recording
-      context.read<TripBloc>().add(StopTripRecordingEvent(trip: widget.trip));
-    }
-  }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.trip.title ?? 'Detalhes da Viagem'),
+        title: BlocBuilder<TripBloc, TripState>(
+          builder: (context, state) {
+            if (state is TripsLoaded) {
+              final updatedTrip = state.trips.firstWhere(
+                (t) => t.id == widget.trip.id,
+                orElse: () => widget.trip,
+              );
+              return Text(updatedTrip.title ?? 'Detalhes da Viagem');
+            }
+            return Text(widget.trip.title ?? 'Detalhes da Viagem');
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -77,9 +69,9 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white, // Cor do texto da aba SELECIONADA (ex: branco)
-          unselectedLabelColor: Colors.white70, // Cor do texto das abas NÃO SELECIONADAS (ex: branco semitransparente)
-          indicatorColor: Colors.white, // Cor da linha indicadora (ex: branco)
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Detalhes'),
             Tab(text: 'Mapa'),
@@ -87,10 +79,13 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
           ],
         ),
       ),
-      body: BlocConsumer<TripBloc, TripState>(
+      body: BlocListener<TripBloc, TripState>(
         listener: (context, state) {
           if (state is TripDeleted) {
-            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Viagem excluída com sucesso.'), backgroundColor: Colors.green),
+            );
+            Navigator.of(context).popUntil((route) => route.isFirst);
           } else if (state is TripError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -100,44 +95,43 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
             );
           }
         },
-        builder: (context, state) {
-          if (state is TripLoading) {
-            return const LoadingIndicator();
-          }
-          
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              // Details Tab
-              _buildDetailsTab(),
-              
-              // Map Tab
-              _buildMapTab(),
-              
-              // Photos Tab
-              _buildPhotosTab(),
-            ],
-          );
-        },
+        child: BlocBuilder<TripBloc, TripState>(
+          builder: (context, state) {
+            if (state is TripLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            if (state is TripsLoaded) {
+              final Trip updatedTrip = state.trips.firstWhere(
+                (trip) => trip.id == widget.trip.id,
+                orElse: () => widget.trip,
+              );
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildDetailsTab(updatedTrip),
+                  _buildMapTab(updatedTrip),
+                  _buildPhotosTab(updatedTrip),
+                ],
+              );
+            }
+            
+            // O nome 'TripError' está correto.
+            if (state is TripError) {
+              return Center(child: Text("Erro ao carregar dados: ${state.message}"));
+            }
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
       ),
-      floatingActionButton: _isRecording
-          ? FloatingActionButton(
-              onPressed: _toggleRecording,
-              backgroundColor: AppColors.secondaryColor,
-              child: const Icon(Icons.stop),
-            )
-          : FloatingActionButton(
-              onPressed: _toggleRecording,
-              backgroundColor: AppColors.accentColor,
-              child: const Icon(Icons.play_arrow),
-            ),
     );
   }
-  
-  Widget _buildDetailsTab() {
+
+  Widget _buildDetailsTab(Trip currentTrip) {
     final dateFormat = DateFormat('dd MMM, yyyy', 'pt_BR');
     final timeFormat = DateFormat('HH:mm', 'pt_BR');
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -153,47 +147,36 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Status da viagem',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkGray,
-                        ),
-                      ),
-                      _buildStatusChip(),
+                      const Text('Status da viagem', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkGray)),
+                      _buildStatusChip(currentTrip),
                     ],
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(
-                    'Iniciada',
-                    widget.trip.startTime != null
-                        ? '${dateFormat.format(widget.trip.startTime!)} às ${timeFormat.format(widget.trip.startTime!)}'
-                        : 'Não iniciada',
+                    'Data de Início',
+                    currentTrip.startTime != null
+                        ? '${dateFormat.format(currentTrip.startTime!)} às ${timeFormat.format(currentTrip.startTime!)}'
+                        : 'Não definido',
                     Icons.play_circle_outline,
                   ),
                   const SizedBox(height: 8),
                   _buildInfoRow(
-                    'Terminada',
-                    widget.trip.endTime != null
-                        ? '${dateFormat.format(widget.trip.endTime!)} às ${timeFormat.format(widget.trip.endTime!)}'
-                        : 'Em progresso',
+                    'Data de Término',
+                    currentTrip.endTime != null
+                        ? '${dateFormat.format(currentTrip.endTime!)} às ${timeFormat.format(currentTrip.endTime!)}'
+                        : 'Em andamento ou não definido',
                     Icons.stop_circle_outlined,
                   ),
                   const SizedBox(height: 8),
                   _buildInfoRow(
                     'Duração',
-                    widget.trip.duration != null
-                        ? '${widget.trip.duration} minutos'
-                        : 'N/A',
+                    currentTrip.duration != null ? '${currentTrip.duration} minutos' : 'N/A',
                     Icons.timer_outlined,
                   ),
                 ],
               ),
             ),
           ),
-          
-          // Trip Details Card
           Card(
             margin: const EdgeInsets.only(bottom: 16),
             child: Padding(
@@ -201,44 +184,23 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Detalhes da Viagem',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkGray,
-                    ),
-                  ),
+                  const Text('Detalhes da Viagem', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkGray)),
                   const SizedBox(height: 16),
                   _buildInfoRow(
                     'Distância',
-                    widget.trip.distance != null
-                        ? '${widget.trip.distance!.toStringAsFixed(2)} km'
-                        : 'N/A',
+                    currentTrip.distance != null ? '${currentTrip.distance!.toStringAsFixed(2)} km' : 'N/A',
                     Icons.straighten,
                   ),
                   const SizedBox(height: 8),
                   _buildInfoRow(
-                    'Velocidade Média',
-                    widget.trip.averageSpeed != null
-                        ? '${widget.trip.averageSpeed!.toStringAsFixed(2)} km/h'
-                        : 'N/A',
-                    Icons.speed,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildInfoRow(
                     'Velocidade Máxima',
-                    widget.trip.maxSpeed != null
-                        ? '${widget.trip.maxSpeed!.toStringAsFixed(2)} km/h'
-                        : 'N/A',
+                    currentTrip.maxSpeed != null ? '${currentTrip.maxSpeed!.toStringAsFixed(2)} km/h' : 'N/A',
                     Icons.trending_up,
                   ),
                 ],
               ),
             ),
           ),
-          
-          // Trip Notes Card
           Card(
             margin: const EdgeInsets.only(bottom: 16),
             child: Padding(
@@ -246,22 +208,11 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Notas da Viagem',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkGray,
-                    ),
-                  ),
+                  const Text('Notas da Viagem', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkGray)),
                   const SizedBox(height: 16),
                   Text(
-                    widget.trip.notes ?? 'Nenhuma nota adicionada para esta viagem.',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: AppColors.darkGray,
-                      height: 1.5,
-                    ),
+                    currentTrip.notes ?? 'Nenhuma nota adicionada para esta viagem.',
+                    style: const TextStyle(fontSize: 16, color: AppColors.darkGray, height: 1.5),
                   ),
                 ],
               ),
@@ -271,76 +222,35 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
       ),
     );
   }
-  
-  Widget _buildMapTab() {
-    // This would be implemented with a map package like google_maps_flutter
+
+  Widget _buildMapTab(Trip currentTrip) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.map_outlined,
-            size: 80,
-            color: AppColors.mediumGray,
-          ),
+          const Icon(Icons.map_outlined, size: 80, color: AppColors.mediumGray),
           const SizedBox(height: 16),
-          const Text(
-            'Mapa da Rota da Viagem',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkGray,
-            ),
-          ),
+          Text('Mapa para ${currentTrip.title}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkGray)),
           const SizedBox(height: 8),
-          Text(
-            _isRecording
-                ? 'Gravação em progresso...'
-                : 'Nenhuma rota registrada para ${widget.trip.title}',
-            style: const TextStyle(
-              fontSize: 16,
-              color: AppColors.mediumGray,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          const Text('Funcionalidade de mapa ainda não implementada.', style: TextStyle(fontSize: 16, color: AppColors.mediumGray), textAlign: TextAlign.center),
         ],
       ),
     );
   }
-  
-  Widget _buildPhotosTab() {
-    // This would display photos taken during the trip
+
+  Widget _buildPhotosTab(Trip currentTrip) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.photo_library_outlined,
-            size: 80,
-            color: AppColors.mediumGray,
-          ),
+          const Icon(Icons.photo_library_outlined, size: 80, color: AppColors.mediumGray),
           const SizedBox(height: 16),
-          const Text(
-            'Fotos da viagem',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkGray,
-            ),
-          ),
+          const Text('Fotos da viagem', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkGray)),
           const SizedBox(height: 8),
-          const Text(
-            'Nenhuma foto foi adicionada para esta viagem ainda',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.mediumGray,
-            ),
-          ),
+          const Text('Nenhuma foto foi adicionada para esta viagem ainda', style: TextStyle(fontSize: 16, color: AppColors.mediumGray)),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              // Add photo functionality
-            },
+            onPressed: () {},
             icon: const Icon(Icons.add_a_photo),
             label: const Text('Adicionar Foto'),
           ),
@@ -348,80 +258,38 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
       ),
     );
   }
-  
-  Widget _buildStatusChip() {
-    if (_isRecording) {
-      return Chip(
-        label: const Text('Gravando'),
-        backgroundColor: AppColors.secondaryColor.withOpacity(0.2),
-        labelStyle: const TextStyle(
-          color: AppColors.secondaryColor,
-          fontWeight: FontWeight.bold,
-        ),
-        avatar: const Icon(
-          Icons.fiber_manual_record,
-          color: AppColors.secondaryColor,
-          size: 16,
-        ),
-      );
-    } else if (widget.trip.endTime != null) {
+
+  Widget _buildStatusChip(Trip currentTrip) {
+    if (currentTrip.endTime != null) {
       return Chip(
         label: const Text('Concluída'),
-        backgroundColor: AppColors.success.withAlpha(51),
-        labelStyle: const TextStyle(
-          color: AppColors.success,
-          fontWeight: FontWeight.bold,
-        ),
-        avatar: const Icon(
-          Icons.check_circle,
-          color: AppColors.success,
-          size: 16,
-        ),
+        backgroundColor: AppColors.success.withOpacity(0.2),
+        labelStyle: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
+        avatar: const Icon(Icons.check_circle, color: AppColors.success, size: 16),
       );
     } else {
       return Chip(
-        label: const Text('Pausada'),
-        backgroundColor: AppColors.warning.withAlpha(51),
-        labelStyle: const TextStyle(
-          color: AppColors.warning,
-          fontWeight: FontWeight.bold,
-        ),
-        avatar: const Icon(
-          Icons.pause_circle_filled,
-          color: AppColors.warning,
-          size: 16,
-        ),
+        label: const Text('Pendente'),
+        backgroundColor: AppColors.warning.withOpacity(0.2),
+        labelStyle: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold),
+        avatar: const Icon(Icons.hourglass_top_outlined, color: AppColors.warning, size: 16),
       );
     }
   }
-  
+
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: AppColors.primaryColor,
-        ),
+        Icon(icon, size: 20, color: AppColors.primaryColor),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.mediumGray,
-                ),
-              ),
+              Text(label, style: const TextStyle(fontSize: 14, color: AppColors.mediumGray)),
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.darkGray,
-                ),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.darkGray),
               ),
             ],
           ),
@@ -429,30 +297,24 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
       ],
     );
   }
-  
+
   void _showDeleteConfirmation() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apagar viagem'),
-        content: const Text(
-          'Tem certeza que deseja excluir esta viagem? Esta ação não pode ser desfeita.',
-        ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir viagem'),
+        content: const Text('Tem certeza que deseja excluir esta viagem? Esta ação não pode ser desfeita.'),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
               context.read<TripBloc>().add(DeleteTripEvent(trip: widget.trip));
+              Navigator.of(dialogContext).pop();
             },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.error,
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Excluir'),
           ),
         ],
@@ -460,4 +322,3 @@ class _TripDetailPageState extends State<TripDetailPage> with SingleTickerProvid
     );
   }
 }
-

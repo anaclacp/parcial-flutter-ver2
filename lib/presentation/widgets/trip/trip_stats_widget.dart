@@ -4,25 +4,27 @@ import '../../../core/constants/app_colors.dart';
 class TripStatsWidget extends StatelessWidget {
   final int totalTrips;
   final double totalDistance;
-  final double longestTrip;
+  final double topSpeed;
 
   const TripStatsWidget({
-    super.key, // Usa super.key aqui
+    super.key,
     required this.totalTrips,
     required this.totalDistance,
-    required this.longestTrip,
+    required this.topSpeed,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Estatísticas da Viagem',
+              'Suas Estatísticas Gerais',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -32,21 +34,28 @@ class TripStatsWidget extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.start, 
               children: [
-                _buildStatItem(
-                  Icons.route,
-                  'Total de Viagens',
-                  totalTrips.toString(),
+                Expanded(
+                  child: _buildStatItem(
+                    Icons.route_outlined,
+                    'Viagens',
+                    totalTrips.toString(),
+                  ),
                 ),
-                _buildStatItem(
-                  Icons.straighten,
-                  'Distância Total',
-                  '${totalDistance.toStringAsFixed(2)} km',
+                Expanded(
+                  child: _buildStatItem(
+                    Icons.map_outlined,
+                    'Distância Total',
+                    '${totalDistance.toStringAsFixed(0)} km',
+                  ),
                 ),
-                _buildStatItem(
-                  Icons.timeline,
-                  'Viagem Mais Longa',
-                  '${longestTrip.toStringAsFixed(2)} km',
+                Expanded(
+                  child: _buildStatItem(
+                    Icons.rocket_launch_outlined,
+                    'Top Speed',
+                    '${topSpeed.toStringAsFixed(0)} km/h',
+                  ),
                 ),
               ],
             ),
@@ -78,6 +87,7 @@ class TripStatsWidget extends StatelessWidget {
             fontSize: 14,
             color: AppColors.mediumGray,
           ),
+          textAlign: TextAlign.center, 
         ),
         const SizedBox(height: 4),
         Text(
@@ -92,4 +102,3 @@ class TripStatsWidget extends StatelessWidget {
     );
   }
 }
-

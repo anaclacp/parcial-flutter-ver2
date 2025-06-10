@@ -7,6 +7,7 @@ import 'presentation/pages/auth/about_page.dart';
 import 'presentation/pages/trips/trip_dashboard_page.dart';
 import 'presentation/pages/trips/trip_detail_page.dart';
 import 'presentation/pages/trips/photo_gallery_page.dart';
+import 'presentation/pages/trips/trip_form_page.dart';
 import 'presentation/pages/fuel/fuel_consumption_page.dart';
 import 'presentation/pages/maintenance/maintenance_reminder_page.dart';
 
@@ -39,29 +40,29 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => TripDetailPage(trip: trip),
         );
+      
+      // ROTA DE CRIAÇÃO ATUALIZADA
       case '/trip/create':
         return MaterialPageRoute(
-          builder: (_) => TripDetailPage(
-            trip: Trip(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              title: 'Nova Viagem',
-            ),
-          ),
+          // Simplesmente abre a página do formulário sem dados iniciais
+          builder: (_) => const TripFormPage(), 
         );
+
+      // ROTA DE EDIÇÃO ATUALIZADA
       case '/trip/edit':
         final trip = settings.arguments as Trip;
         return MaterialPageRoute(
-          builder: (_) => TripDetailPage(trip: trip),
+          builder: (_) => TripFormPage(initialTrip: trip),
         );
       case '/fotos':
         return MaterialPageRoute(
           builder: (_) => const PhotoGalleryPage(),
         );
-      case '/combustível':
+      case '/combustivel':
         return MaterialPageRoute(
           builder: (_) => const FuelConsumptionPage(),
         );
-      case '/manutenção':
+      case '/manutencao':
         return MaterialPageRoute(
           builder: (_) => const MaintenanceReminderPage(),
         );

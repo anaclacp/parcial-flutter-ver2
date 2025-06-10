@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/input_validator.dart';
 import '../../../domain/entities/maintenance.dart';
@@ -251,117 +252,85 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog( // MODIFICADO: Passando dialogContext
         title: const Text('Adicionar lembrete de manutenção'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title
-                AppTextField(
-                  label: 'Título',
-                  hint: 'Insira o título da manutenção',
-                  controller: titleController,
-                  validator: (value) => InputValidator.validateNotEmpty(
-                    value,
-                    'Título',
-                  ),
+        content: StatefulBuilder( // NOVO: Necessário para atualizar o Dropdown e o DatePicker dentro do diálogo
+          builder: (context, setStateDialog) {
+            return SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppTextField(label: 'Título', hint: 'Ex: Troca de óleo', controller: titleController, validator: (v) => InputValidator.validateNotEmpty(v, 'Título')),
+                    const SizedBox(height: 16),
+                    AppTextField(label: 'Descrição', hint: 'Ex: Usar óleo Motul 5100', controller: descriptionController, maxLines: 2, validator: (v) => InputValidator.validateNotEmpty(v, 'Descrição')),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<MaintenanceType>(
+                      decoration: const InputDecoration(labelText: 'Tipo de Manutenção'),
+                      value: selectedType,
+                      items: MaintenanceType.values.map((type) {
+                        return DropdownMenuItem<MaintenanceType>(value: type, child: Text(_getMaintenanceTypeString(type)));
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setStateDialog(() { selectedType = value; });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Data de Vencimento'),
+                      subtitle: Text(DateFormat('dd MMM, yyyy', 'pt_BR').format(selectedDate)),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: dialogContext,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                        );
+                        if (picked != null && picked != selectedDate) {
+                          setStateDialog(() { selectedDate = picked; });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(label: 'Limite do Odômetro (km)', hint: 'Ex: 15000', controller: odometerController, keyboardType: TextInputType.number, validator: (v) => InputValidator.validateNumber(v, 'Limite do Odômetro')),
+                    const SizedBox(height: 16),
+                    AppTextField(label: 'Notas (Opcional)', hint: 'Insira quaisquer observações', controller: notesController, maxLines: 3),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                
-                // Description
-                AppTextField(
-                  label: 'Descrição',
-                  hint: 'Insira a descrição da manutenção',
-                  controller: descriptionController,
-                  maxLines: 2,
-                  validator: (value) => InputValidator.validateNotEmpty(
-                    value,
-                    'Descrição',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Type
-                DropdownButtonFormField<MaintenanceType>(
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de Manutenção',
-                  ),
-                  value: selectedType,
-                  items: MaintenanceType.values.map((type) {
-                    return DropdownMenuItem<MaintenanceType>(
-                      value: type,
-                      child: Text(_getMaintenanceTypeString(type)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedType = value;
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Due Date
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Data de Vencimento'),
-                  subtitle: Text(DateFormat('dd MMM, yyyy', 'pt_BR').format(selectedDate)),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-                    );
-                    if (picked != null && picked != selectedDate) {
-                      setState(() {
-                        selectedDate = picked;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Odometer Threshold
-                AppTextField(
-                  label: 'Limite do Odômetro (km)',
-                  hint: 'Insira o limite do Odômetro',
-                  controller: odometerController,
-                  keyboardType: TextInputType.number,
-                  validator: (value) => InputValidator.validateNumber(
-                    value,
-                    'Limite do Odômetro',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Notes
-                AppTextField(
-                  label: 'Notas (Opcional)',
-                  hint: 'Insira quaisquer observações adicionais',
-                  controller: notesController,
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
             },
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
+                // ---- INÍCIO DA LÓGICA MODIFICADA ----
+                
+                final userId = FirebaseAuth.instance.currentUser?.uid;
+
+                if (userId == null) {
+                  Navigator.of(dialogContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Erro: Usuário não autenticado.'), backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
+
                 final maintenance = Maintenance(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  // id será gerado pelo Firestore
+                  userId: userId, // <-- A MUDANÇA CRUCIAL
                   title: titleController.text,
                   description: descriptionController.text,
                   type: selectedType,
@@ -372,7 +341,9 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
                 );
                 
                 context.read<MaintenanceBloc>().add(AddMaintenanceEvent(maintenance: maintenance));
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
+
+                // ---- FIM DA LÓGICA MODIFICADA ----
               }
             },
             child: const Text('Salvar'),
@@ -394,110 +365,103 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog( // Use dialogContext aqui também
         title: const Text('Editar Lembrete de Manutenção'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title
-                AppTextField(
-                  label: 'Título',
-                  hint: 'Insira o título da manutenção',
-                  controller: titleController,
-                  validator: (value) => InputValidator.validateNotEmpty(
-                    value,
-                    'Título',
-                  ),
+        content: StatefulBuilder( // Adicione StatefulBuilder para atualizações
+          builder: (context, setStateDialog) {
+            return SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title
+                    AppTextField(
+                      label: 'Título',
+                      hint: 'Insira o título da manutenção',
+                      controller: titleController,
+                      validator: (value) => InputValidator.validateNotEmpty(value, 'Título'),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Description
+                    AppTextField(
+                      label: 'Descrição',
+                      hint: 'Insira a descrição da manutenção',
+                      controller: descriptionController,
+                      maxLines: 2,
+                      validator: (value) => InputValidator.validateNotEmpty(value, 'Descrição'),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Type
+                    DropdownButtonFormField<MaintenanceType>(
+                      decoration: const InputDecoration(labelText: 'Tipo de Manutenção'),
+                      value: selectedType,
+                      items: MaintenanceType.values.map((type) {
+                        return DropdownMenuItem<MaintenanceType>(
+                          value: type,
+                          child: Text(_getMaintenanceTypeString(type)),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setStateDialog(() { // Use setStateDialog
+                            selectedType = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Due Date
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Data de Vencimento'),
+                      subtitle: Text(DateFormat('dd MMM, yyyy', 'pt_BR').format(selectedDate)),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: dialogContext, // Use dialogContext
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+                        );
+                        if (picked != null && picked != selectedDate) {
+                          setStateDialog(() { // Use setStateDialog
+                            selectedDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Odometer Threshold
+                    AppTextField(
+                      label: 'Limite do Odômetro (km)',
+                      hint: 'Insira o limite do odômetro',
+                      controller: odometerController,
+                      keyboardType: TextInputType.number,
+                      validator: (value) => InputValidator.validateNumber(value, 'Limite do odômetro'),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Notes
+                    AppTextField(
+                      label: 'Notas (Opcional)',
+                      hint: 'Insira quaisquer observações adicionais',
+                      controller: notesController,
+                      maxLines: 3,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                
-                // Description
-                AppTextField(
-                  label: 'Descrição',
-                  hint: 'Insira a descrição da manutenção',
-                  controller: descriptionController,
-                  maxLines: 2,
-                  validator: (value) => InputValidator.validateNotEmpty(
-                    value,
-                    'Descrição',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Type
-                DropdownButtonFormField<MaintenanceType>(
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de Manutenção',
-                  ),
-                  value: selectedType,
-                  items: MaintenanceType.values.map((type) {
-                    return DropdownMenuItem<MaintenanceType>(
-                      value: type,
-                      child: Text(_getMaintenanceTypeString(type)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedType = value;
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Due Date
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Data de Vencimento'),
-                  subtitle: Text(DateFormat('dd MMM, yyyy', 'pt_BR').format(selectedDate)),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-                    );
-                    if (picked != null && picked != selectedDate) {
-                      setState(() {
-                        selectedDate = picked;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Odometer Threshold
-                AppTextField(
-                  label: 'Limite do Odômetro (km)',
-                  hint: 'Insira o limite do odômetro',
-                  controller: odometerController,
-                  keyboardType: TextInputType.number,
-                  validator: (value) => InputValidator.validateNumber(
-                    value,
-                    'Limite do odômetro',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Notes
-                AppTextField(
-                  label: 'Notas (Opcional)',
-                  hint: 'Insira quaisquer observações adicionais',
-                  controller: notesController,
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancelar'),
           ),
           TextButton(
@@ -505,6 +469,7 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
               if (formKey.currentState!.validate()) {
                 final updatedMaintenance = Maintenance(
                   id: maintenance.id,
+                  userId: maintenance.userId, // ⚠️ IMPORTANTE: Manter o userId original
                   title: titleController.text,
                   description: descriptionController.text,
                   type: selectedType,
@@ -517,7 +482,7 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
                 );
                 
                 context.read<MaintenanceBloc>().add(UpdateMaintenanceEvent(maintenance: updatedMaintenance));
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               }
             },
             child: const Text('Salvar'),
@@ -535,74 +500,70 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog( // Use dialogContext
         title: const Text('Marcar como concluído'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Marcar "${maintenance.title}" como concluído?',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+        content: StatefulBuilder( // Adicione StatefulBuilder
+          builder: (context, setStateDialog) {
+            return SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Marcar "${maintenance.title}" como concluído?',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Completion Date
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Data de Conclusão'),
+                      subtitle: Text(DateFormat('dd MMM, yyyy', 'pt_BR').format(completedDate)),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: dialogContext, // Use dialogContext
+                          initialDate: completedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null && picked != completedDate) {
+                          setStateDialog(() { // Use setStateDialog
+                            completedDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Odometer Reading
+                    AppTextField(
+                      label: 'Odômetro Atual (km)',
+                      hint: 'Insira a leitura atual do odômetro',
+                      controller: odometerController,
+                      keyboardType: TextInputType.number,
+                      validator: (value) => InputValidator.validateNumber(value, 'Leitura do odômetro'),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Notes
+                    AppTextField(
+                      label: 'Notas de Conclusão (Opcional)',
+                      hint: 'Insira quaisquer observações sobre a manutenção',
+                      controller: notesController,
+                      maxLines: 3,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                
-                // Completion Date
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Data de Conclusão'),
-                  subtitle: Text(DateFormat('dd MMM, yyyy', 'pt_BR').format(completedDate)),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: completedDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null && picked != completedDate) {
-                      setState(() {
-                        completedDate = picked;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Odometer Reading
-                AppTextField(
-                  label: 'Odômetro Atual (km)',
-                  hint: 'Insira a leitura atual do odômetro',
-                  controller: odometerController,
-                  keyboardType: TextInputType.number,
-                  validator: (value) => InputValidator.validateNumber(
-                    value,
-                    'Leitura do odômetro',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Notes
-                AppTextField(
-                  label: 'Notas de Conclusão (Opcional)',
-                  hint: 'Insira quaisquer observações sobre a manutenção',
-                  controller: notesController,
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancelar'),
           ),
           TextButton(
@@ -610,6 +571,7 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
               if (formKey.currentState!.validate()) {
                 final updatedMaintenance = Maintenance(
                   id: maintenance.id,
+                  userId: maintenance.userId, // ⚠️ IMPORTANTE: Manter o userId original
                   title: maintenance.title,
                   description: maintenance.description,
                   type: maintenance.type,
@@ -623,7 +585,7 @@ class _MaintenanceReminderPageState extends State<MaintenanceReminderPage> with 
                 );
                 
                 context.read<MaintenanceBloc>().add(UpdateMaintenanceEvent(maintenance: updatedMaintenance));
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               }
             },
             child: const Text('Concluir'),
