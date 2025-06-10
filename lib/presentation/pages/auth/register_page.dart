@@ -68,23 +68,22 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is RegistrationSuccessful) {
-          // Mostra a mensagem de sucesso
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Bem-vindo! Registro realizado com sucesso.'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-      },
+      if (state is Authenticated) { 
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bem-vindo! Registro realizado com sucesso.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else if (state is AuthError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.message),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Criar Conta'),

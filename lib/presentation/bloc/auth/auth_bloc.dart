@@ -11,18 +11,14 @@ import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  // Instâncias do Firebase
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
 
-  // MODIFICADO: O construtor agora pode receber as instâncias do Firebase
-  // (bom para testes), e registra os novos eventos.
   AuthBloc({FirebaseAuth? firebaseAuth, FirebaseFirestore? firestore})
       : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
-        super(AuthInitial()) { // O estado inicial agora é AuthInitial
+        super(AuthInitial()) { 
 
-    // Registra os handlers para cada evento
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<SignInRequested>(_onSignIn);
     on<RegisterRequested>(_onRegister);
@@ -30,9 +26,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SignOutRequested>(_onSignOut);
   }
 
-  // NOVO: Handler para o evento de verificação inicial
   Future<void> _onCheckAuthStatus(CheckAuthStatusEvent event, Emitter<AuthState> emit) async {
-    // Ao iniciar, verificamos se já existe um usuário logado.
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser != null) {
       emit(Authenticated(user: currentUser));
@@ -41,41 +35,54 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // MODIFICADO: Lógica de Login real com Firebase
   Future<void> _onSignIn(SignInRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      // MODIFICAÇÃO IMPORTANTE: Capture o resultado da chamada
       final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: event.email,
         password: event.password,
       );
 
-      // NOVO: Verifique se o login retornou um usuário e emita o estado de sucesso
       if (userCredential.user != null) {
         emit(Authenticated(user: userCredential.user!));
       } else {
-        // Caso muito raro, mas é bom ter um fallback
         emit(const AuthError(message: 'Não foi possível verificar o usuário após o login.'));
       }
 
     } on FirebaseAuthException catch (e) {
-      emit(AuthError(message: e.message ?? 'Ocorreu um erro de login.'));
+      
+      String errorMessage = 'Ocorreu um erro desconhecido.';
+      switch (e.code) {
+        case 'invalid-credential':
+        case 'user-not-found':
+        case 'wrong-password':
+          errorMessage = 'E-mail ou senha inválidos. Por favor, tente novamente.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'Esta conta de usuário foi desativada.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'O formato do e-mail é inválido.';
+          break;
+        default:
+          errorMessage = 'Falha no login. Verifique sua conexão e tente novamente.';
+      }
+      
+      emit(AuthError(message: errorMessage));
+
     } catch (e) {
       emit(AuthError(message: 'Um erro inesperado ocorreu: ${e.toString()}'));
     }
   }
-  // MODIFICADO: Lógica de Registro real com Firebase
+
   Future<void> _onRegister(RegisterRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      // 1. Cria o usuário no Firebase Authentication
       UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: event.email,
         password: event.password,
       );
 
-      // 2. Salva informações adicionais (nome, telefone) no Firestore
       if (userCredential.user != null) {
         await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
           'name': event.name,
@@ -83,9 +90,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'phone': event.phone,
           'createdAt': Timestamp.now(),
         });
-
         // 3. Emite um estado de sucesso para a UI poder reagir (ex: mostrar SnackBar e navegar)
-        emit(RegistrationSuccessful());
+        emit(Authenticated(user: userCredential.user!));
       }
     } on FirebaseAuthException catch (e) {
       emit(AuthError(message: e.message ?? 'Ocorreu um erro no registro.'));
@@ -93,7 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthError(message: 'Um erro inesperado ocorreu: ${e.toString()}'));
     }
   }
-  
+
   // MODIFICADO: Lógica de Logout real
   Future<void> _onSignOut(SignOutRequested event, Emitter<AuthState> emit) async {
     // Não precisa de AuthLoading para um logout rápido

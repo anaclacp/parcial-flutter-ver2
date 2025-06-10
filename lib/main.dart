@@ -17,6 +17,7 @@ import 'dependency_injection.dart' as di;
 import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/trips/trip_dashboard_page.dart';
 import 'presentation/widgets/common/loading_indicator.dart';
+import 'presentation/bloc/auth/auth_state.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,20 +74,40 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: LoadingIndicator(message: 'Verificando...'),
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        // Pode adicionar tratamento de erros globais aqui se necessário
+        if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
           );
         }
-
-        if (snapshot.hasData) {
-          return const TripDashboardPage();
-        } else {
-          return const LoginPage();
-        }
+      },
+      builder: (context, state) {
+        return StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, snapshot) {
+            // Se ainda está carregando ou verificando
+            if (snapshot.connectionState == ConnectionState.waiting ||
+                state is AuthLoading ||
+                state is AuthInitial) {
+              return const Scaffold(
+                body: LoadingIndicator(message: 'Verificando...'),
+              );
+            }
+            
+            // Se há dados no snapshot OU se o BLoC diz que está autenticado
+            if (snapshot.hasData || state is Authenticated) {
+              return const TripDashboardPage();
+            }
+            
+            // Caso contrário, mostrar login
+            return const LoginPage();
+          },
+        );
       },
     );
   }
