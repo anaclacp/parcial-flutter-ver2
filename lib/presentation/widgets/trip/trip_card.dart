@@ -8,7 +8,7 @@ class TripCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const TripCard({
-    super.key, // Usa super.key aqui
+    super.key,
     required this.trip,
     required this.onTap,
   }); 
@@ -19,6 +19,8 @@ class TripCard extends StatelessWidget {
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -30,33 +32,29 @@ class TripCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect( // Adiciona ClipRRect para aplicar o borderRadius à imagem
-                    borderRadius: BorderRadius.circular(12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
                       width: 60,
                       height: 60,
-                      // Mantém a cor de fundo para casos de erro ou ausência de imagem
-                      color: AppColors.primaryColor.withOpacity(0.1), // Talvez um pouco mais sutil
+                      color: AppColors.primaryColor.withOpacity(0.1),
                       child: trip.coverPhotoUrl != null && trip.coverPhotoUrl!.isNotEmpty
-                          ? Image.asset( // <<< USA Image.asset PORQUE SEU EXEMPLO USA CAMINHOS DE ASSET
+                          ? Image.asset(
                               trip.coverPhotoUrl!,
-                              fit: BoxFit.cover, // Para preencher o container
+                              fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                // É útil logar o erro para debug
-                                print("Erro ao carregar asset da capa no card: ${trip.coverPhotoUrl} - $error");
-                                // Retorna um ícone indicando erro ao carregar o asset
                                 return const Center(
                                   child: Icon(
-                                    Icons.broken_image_outlined, // Ou Icons.image_not_supported
+                                    Icons.broken_image_outlined,
                                     color: AppColors.mediumGray,
                                     size: 32,
                                   ),
                                 );
                               },
                             )
-                          : const Center( // <<< Fallback: Se não houver URL, mostra o ícone original
+                          : const Center(
                               child: Icon(
-                                Icons.motorcycle, // Ícone padrão
+                                Icons.motorcycle,
                                 color: AppColors.primaryColor,
                                 size: 32,
                               ),
@@ -75,27 +73,25 @@ class TripCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             color: AppColors.darkGray,
                           ),
-                          maxLines: 1,
+                          maxLines: 2, 
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           trip.startTime != null
                               ? dateFormat.format(trip.startTime!)
-                              : 'Não Iniciada',
+                              : 'Data não definida',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.mediumGray,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        _buildStatusChip(),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const Divider(height: 24, thickness: 1), 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -103,7 +99,7 @@ class TripCard extends StatelessWidget {
                     Icons.straighten,
                     'Distância',
                     trip.distance != null
-                        ? '${trip.distance!.toStringAsFixed(2)} km'
+                        ? '${trip.distance!.toStringAsFixed(1)} km'
                         : 'N/A',
                   ),
                   _buildStatItem(
@@ -114,10 +110,10 @@ class TripCard extends StatelessWidget {
                         : 'N/A',
                   ),
                   _buildStatItem(
-                    Icons.speed,
-                    'Velocidade Média',
-                    trip.averageSpeed != null
-                        ? '${trip.averageSpeed!.toStringAsFixed(2)} km/h'
+                    Icons.trending_up, 
+                    'Vel. Máxima',   
+                    trip.maxSpeed != null
+                        ? '${trip.maxSpeed!.toStringAsFixed(0)} km/h' 
                         : 'N/A',
                   ),
                 ],
@@ -129,48 +125,6 @@ class TripCard extends StatelessWidget {
     );
   }
   
-  Widget _buildStatusChip() {
-    if (trip.endTime == null && trip.startTime != null) {
-      return Chip(
-        label: const Text('Em Progresso'),
-        backgroundColor: AppColors.secondaryColor.withOpacity(0.2),
-        labelStyle: const TextStyle(
-          color: AppColors.secondaryColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        padding: EdgeInsets.zero,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-      );
-    } else if (trip.endTime != null) {
-      return Chip(
-        label: const Text('Concluído'),
-        backgroundColor: AppColors.success.withOpacity(0.2),
-        labelStyle: const TextStyle(
-          color: AppColors.success,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        padding: EdgeInsets.zero,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-      );
-    } else {
-      return Chip(
-        label: const Text('Não Iniciado'),
-        backgroundColor: AppColors.mediumGray.withOpacity(0.2),
-        labelStyle: const TextStyle(
-          color: AppColors.mediumGray,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        padding: EdgeInsets.zero,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-      );
-    }
-  }
   
   Widget _buildStatItem(IconData icon, String label, String value) {
     return Column(
@@ -201,4 +155,3 @@ class TripCard extends StatelessWidget {
     );
   }
 }
-

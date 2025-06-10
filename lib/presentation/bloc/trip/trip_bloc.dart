@@ -125,12 +125,12 @@ class TripBloc extends Bloc<TripEvent, TripState> {
       await _firestore.collection('trips').doc(event.trip.id).update(tripMap);
       
       emit(TripUpdated());
-      add(LoadTripsEvent());
+      add(LoadTripsEvent()); 
     } catch (e) {
       emit(TripError(message: 'Falha ao atualizar viagem: ${e.toString()}'));
     }
   }
-
+  
   Future<void> _onDeleteTrip(DeleteTripEvent event, Emitter<TripState> emit) async {
     try {
       if (event.trip.id == null) throw Exception("ID da viagem não pode ser nulo para deletar.");

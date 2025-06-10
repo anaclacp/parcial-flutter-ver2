@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'domain/entities/trip.dart';
 import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/auth/register_page.dart';
@@ -8,6 +7,7 @@ import 'presentation/pages/auth/about_page.dart';
 import 'presentation/pages/trips/trip_dashboard_page.dart';
 import 'presentation/pages/trips/trip_detail_page.dart';
 import 'presentation/pages/trips/photo_gallery_page.dart';
+import 'presentation/pages/trips/trip_form_page.dart';
 import 'presentation/pages/fuel/fuel_consumption_page.dart';
 import 'presentation/pages/maintenance/maintenance_reminder_page.dart';
 
@@ -40,33 +40,29 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => TripDetailPage(trip: trip),
         );
+      
+      // ROTA DE CRIAÇÃO ATUALIZADA
       case '/trip/create':
         return MaterialPageRoute(
-          builder: (_) {
-            final userId = FirebaseAuth.instance.currentUser?.uid;
-            return TripDetailPage(
-              trip: Trip(
-                userId: userId ?? '',
-                title: 'Nova Viagem',
-                startTime: DateTime.now(),
-              ),
-            );
-          },
+          // Simplesmente abre a página do formulário sem dados iniciais
+          builder: (_) => const TripFormPage(), 
         );
+
+      // ROTA DE EDIÇÃO ATUALIZADA
       case '/trip/edit':
         final trip = settings.arguments as Trip;
         return MaterialPageRoute(
-          builder: (_) => TripDetailPage(trip: trip),
+          builder: (_) => TripFormPage(initialTrip: trip),
         );
       case '/fotos':
         return MaterialPageRoute(
           builder: (_) => const PhotoGalleryPage(),
         );
-      case '/combustível':
+      case '/combustivel':
         return MaterialPageRoute(
           builder: (_) => const FuelConsumptionPage(),
         );
-      case '/manutenção':
+      case '/manutencao':
         return MaterialPageRoute(
           builder: (_) => const MaintenanceReminderPage(),
         );

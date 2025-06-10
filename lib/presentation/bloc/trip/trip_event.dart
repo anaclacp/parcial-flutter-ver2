@@ -95,3 +95,9 @@ class DeletePhotoEvent extends TripEvent {
   @override
   List<Object?> get props => [photoId];
 }
+
+class LoadTripByIdEvent extends TripEvent {
+  final String tripId;
+
+  LoadTripByIdEvent(this.tripId);
+}

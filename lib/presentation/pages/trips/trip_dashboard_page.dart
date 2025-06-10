@@ -58,8 +58,11 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).pushNamed('/trip/create');
+        onPressed: () async {
+          await Navigator.of(context).pushNamed('/trip/create');
+          if (mounted) {
+            context.read<TripBloc>().add(LoadTripsEvent());
+          }
         },
         tooltip: 'Adicionar Nova Viagem',
         backgroundColor: AppColors.accentColor,
@@ -69,8 +72,55 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
   }
 
   Widget _buildBodyContent(BuildContext context, TripState state) {
-    // 1. Tratar o Estado de Erro
-    if (state is TripError) {
+    if (state is TripsLoaded) {
+      final trips = state.trips;
+
+      // Calculando os totais para o widget de estatísticas
+      final double totalDistance = trips.fold(0.0, (sum, trip) => sum + (trip.distance ?? 0));
+      final double topSpeedOverall = trips.fold(0.0, (max, trip) => (trip.maxSpeed ?? 0) > max ? trip.maxSpeed! : max);
+
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // << A CORREÇÃO FINAL ESTÁ AQUI >>
+            // A chamada para TripStatsWidget agora está correta, usando 'topSpeed'.
+            TripStatsWidget(
+              totalTrips: trips.length,
+              totalDistance: totalDistance,
+              topSpeed: topSpeedOverall,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Viagens Recentes',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkGray),
+            ),
+            const SizedBox(height: 16),
+            trips.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: trips.length,
+                    itemBuilder: (context, index) {
+                      final trip = trips[index];
+                      return TripCard(
+                        trip: trip,
+                        onTap: () {
+                           Navigator.of(context).pushNamed('/viagem/detalhe', arguments: trip);
+                        },
+                      );
+                    },
+                  ),
+          ],
+        ),
+      );
+    }
+    
+    // Mostra o erro somente se não houver dados carregados
+    if (state is TripError && state is! TripsLoaded) {
       return Center(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -98,49 +148,6 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
       );
     }
 
-    // 2. Tratar o Estado Carregado
-    if (state is TripsLoaded) {
-      final trips = state.trips;
-
-      return SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TripStatsWidget(
-              totalTrips: trips.length,
-              totalDistance: trips.fold(0.0, (sum, trip) => sum + (trip.distance ?? 0)),
-              longestTrip: trips.fold(0.0, (max, trip) => trip.distance != null && trip.distance! > max ? trip.distance! : max),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Viagens Recentes',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkGray),
-            ),
-            const SizedBox(height: 16),
-            trips.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: trips.length,
-                    itemBuilder: (context, index) {
-                      final trip = trips[index];
-                      return TripCard(
-                        trip: trip,
-                        onTap: () {
-                          Navigator.of(context).pushNamed('/viagem/detalhe', arguments: trip);
-                        },
-                      );
-                    },
-                  ),
-          ],
-        ),
-      );
-    }
-
-    // 3. Estado de Carregamento
     return const Center(child: LoadingIndicator(message: 'Carregando viagens...'));
   }
 
@@ -177,8 +184,11 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/trip/create');
+              onPressed: () async {
+                await Navigator.of(context).pushNamed('/trip/create');
+                if (mounted) {
+                  context.read<TripBloc>().add(LoadTripsEvent());
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text('Registrar Nova Viagem'),
@@ -268,7 +278,7 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
               ListTile(
                 leading: const Icon(Icons.dashboard, color: AppColors.primaryColor),
                 title: const Text('Dashboard'),
-                selected: ModalRoute.of(context)?.settings.name == '/dashboard',
+                selected: ModalRoute.of(context)?.settings.name == '/dashboard' || ModalRoute.of(context)?.settings.name == '/',
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -302,8 +312,8 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
                 leading: const Icon(Icons.settings, color: AppColors.primaryColor),
                 title: const Text('Configurações'),
                 onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/configuracoes');
+                  // Navigator.pop(context);
+                  // Navigator.pushNamed(context, '/configuracoes');
                 },
               ),
               ListTile(
@@ -371,13 +381,11 @@ class _TripDashboardPageState extends State<TripDashboardPage> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Fecha o dialog
-                Navigator.of(context).pop(); // Fecha o drawer
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
                 
-                // Dispara o evento de logout no AuthBloc
                 context.read<AuthBloc>().add(SignOutRequested());
                 
-                // Mostra feedback visual
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Saindo da conta...'),

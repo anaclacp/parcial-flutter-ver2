@@ -7,7 +7,6 @@ class Trip {
   final DateTime? endTime;
   final double? distance;
   final int? duration; 
-  final double? averageSpeed;
   final double? maxSpeed;
   final String? notes;
   final List<String>? photoIds;
@@ -21,7 +20,6 @@ class Trip {
     this.endTime,
     this.distance,
     this.duration,
-    this.averageSpeed,
     this.maxSpeed,
     this.notes,
     this.photoIds,
@@ -36,7 +34,6 @@ class Trip {
     DateTime? endTime,
     double? distance,
     int? duration,
-    double? averageSpeed,
     double? maxSpeed,
     String? notes,
     String? coverPhotoUrl,
@@ -50,7 +47,6 @@ class Trip {
       endTime: endTime ?? this.endTime,
       distance: distance ?? this.distance,
       duration: duration ?? this.duration,
-      averageSpeed: averageSpeed ?? this.averageSpeed,
       maxSpeed: maxSpeed ?? this.maxSpeed,
       notes: notes ?? this.notes,
       photoIds: photoIds ?? this.photoIds,
@@ -65,7 +61,6 @@ class Trip {
       'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
       'distance': distance,
       'duration': duration,
-      'averageSpeed': averageSpeed,
       'maxSpeed': maxSpeed,
       'notes': notes,
       'coverPhotoUrl': coverPhotoUrl,
@@ -80,7 +75,6 @@ class Trip {
       endTime: (map['endTime'] as Timestamp?)?.toDate(),
       distance: map['distance']?.toDouble(),
       duration: map['duration']?.toInt(),
-      averageSpeed: map['averageSpeed']?.toDouble(),
       maxSpeed: map['maxSpeed']?.toDouble(),
       notes: map['notes'],
       coverPhotoUrl: map['coverPhotoUrl'],
